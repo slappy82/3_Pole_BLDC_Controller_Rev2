@@ -35,7 +35,7 @@
  *      Most likely going to use one of: 
  *          WGM0[2:0]=0b101 (phase correct PWM with OCRA set for top value for compare, updating OCR0x at OCRA and setting TOV flag at 0),     
  *          WGM0[2:0]=0b111 (fast PWM, same as above except updating and flag setting reversed)
- *          WGM0[2:0]=0b010 (CRC mode, OCRA for top value, updates OCR0x constantly and flag set at 0bFF)
+ *          WGM0[2:0]=0b010 (CTC mode, OCRA for top value, updates OCR0x constantly and flag set at 0bFF)
  * TCNT0 holds the current value of the Timer/Counter
  * OCR0A holds the value set to be constantly compared against the TCNT0 - can use a match to trigger interrupt or output to OC0A pin
  * TIMSK0 bits set here (as well as in the Status Register - SREG[7]=1. Also note that mentions of the I-bit refer to this) can enable/disable specific interrupts
@@ -46,29 +46,8 @@
 
  /*
   * PWM
-  * Going to be a nightmare using 3x dual half bridge drivers - I do not want to just alternate HO and LO on the same driver going active. Need to make use of IN and SD
-  *     on both drivers connected to the two active motor connections in the current stage of the sequence (one will be for the +Vin to motor and one for motor to GND).
-  *     
-  *     'Normal' operation includes sending the PWM signal to IN and holding SD (ShutDown) as HIGH (SD is inverted so LOW shuts down the driver, HIGH turns the driver on).
-  *     IN as HIGH sets HO as HIGH, IN as LOW sets LO as LOW (all assuming SD is set as HIGH).
-  *     Plan:
-  *         For current High side controlling driver hold IN as HIGH and send PWM signal to SD to toggle between HO set as HIGH and the driver being off. 
-  *         For current Low side controlling driver hold IN as LOW and send *THE SAME* PWM signal to SD to toggle between LO set as HIGH and the driver being off.
-  *             *Obviously these need the same PWM timing or there will be reduced efficiency due to the circuit effectively being open longer than it should be.
-  *         For currently unused connection controlling driver just hold SD as LOW to disable this driver. IN can be set as HIGH or LOW, but could be good to set state
-  *             to the next in the sequence.
-  *         
-  *         I think we have a new array similar to the motor position one, but which uses the value in the same index position as motor position one as an offset:
-  *             Currently: PORTD = motorPhase[currentStep] * pwmToggleHi
-  *             Proposed: PORTD = (motorPhase[currentStep] * pwmToggleHi) + motorPhaseOffset[currentStep]
-  *         This offset will be to include the pins which we want to just hold as HIGH, unaffected by the PWM cycle for the duration of the motor position stage
-  *         
-  * Will use the internal IO Clock (16MHz) source, so need to decide on:
-  *     Period - Short enough to allow for enough cycles per stage of the sequence and keep the average voltage smooth
-  *              Long enough to use with our clock etc
-  *     Resolution - Don't really need analogue levels of control, probably 4 or 5 speed settings eg: 20%, 40%, 60%, 80%. 0 and 100 do not require PWM.
-  *         Assuming PWM is used to control the speed (via the average voltage used), but bootstrapping manual timing offset sounds horrible
-  *     Prescalar - Assume either none or /8
+  * Using the IR2110 drivers as they are independant as trying to make it work with the previous ones by using the SD as a state toggle will be a problem with timings etc
+  * 
   */
 
    /*
@@ -115,8 +94,8 @@
 #define console Serial
 
 bool pwmToggleHi;
-uint8_t currentStep;
-uint8_t motorPhase[6];
+unsigned char currentStep;
+unsigned char motorPhase[6];
 
 void setup() {
     // Initial pin configuration, Digital GPIO 2-7 set as output in LO state 
@@ -125,7 +104,7 @@ void setup() {
 
     // Initialise global variables
     currentStep = 0;
-    pwmToggleHi = 1;
+    pwmToggleHi = true;
     motorPhase[68, 132, 136, 40, 48, 80];   // More efficient than bit shifting operations for consistent values
 
     // Serial monitor for debugging
@@ -133,8 +112,10 @@ void setup() {
     console.println("Starting..."); 
 
     // Initialise PWM interrupts
-    
-        // mode
+
+    TCCR0B |= (0 << WGM02) | (0 << CS02) | (1 << CS01) | (1 << CS00);   // WGM0n to set the mode (CTC), CS0n to set the clock and prescaler (clk/64 prescaler)
+    TCCR0A |= (1 << WGM01) | (0 << WGM00);
+    OCR0B = 100;                                                        // Value to act as the maximum 
     TIMSK0 |= 0b00000100;
     SREG |= 0b10000000;
 }
@@ -143,16 +124,16 @@ void loop() {
 
 }
 
-// PWM
+// PWM - will likely want to adjust OCR0B in here
 ISR(TIMER0_COMPB) {
     PORTD = motorPhase[currentStep] * pwmToggleHi;
     pwmToggleHi = !pwmToggleHi;    
 }
 
 // Rotor Position
-ISR(INT0_vect) {    // Check the chosen interrupt is correct
+ISR(INT0_vect) {                            // Digital pin 
     PORTD = 0;                              // Prevent shoot-through current
-    currentStep = (currentStep + 1) % 6;
+    (++currentStep) %= 6;
     PORTD = motorPhase[currentStep];        // Reset to next rotor position in the sequence - could wait for PWM to handle?
 }
 
