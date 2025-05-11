@@ -1,0 +1,37 @@
+This project is the continuation of an earlier project of mine which became 'permanently archived' so I am considering it to be the Version 2 or Revision 1 (I will have to rename away from Rev2 as that is not right) given that there is a lot of reworking of previous progress as well as continuing ahead.
+
+I am developing / building / designing a quadcopter drone more or less from scratch using well understood concepts and methods to teach myself and better understand electronics concepts as well as programming, in particular embedded low level MCU programming, so lots of C and EC++ and probably Assembly at some point. It is fairly open ended and does not have very specific criteria as it is more about learning etc, but I might make one which fits when it is all done and explain how Everything Was Done Deliberately And According To Well Planned Out Design.
+
+This will require a lot of design decisions and I will try and document things in a somewhat logical and organized manner. In terms of broad categorizations it seems sensible to have something like: 
+
+Electronic 
+	Related Electronic Theory and Concepts 
+	Design Decision Summary
+	Circuit Design
+	Component Selection 
+	Important Datasheets (mostly for IC and semiconductor components requiring multiple connections or special handling)
+
+Programming 
+	Planning and Pseudocode
+	Code (if not at the root directory of this project)
+	MCU Selection and Datasheet
+
+Engineering (I want this to cover hands-on work, mechanical and general theories etc)
+	Related non-electronic or code specific concepts and theories
+	Overall Build and Module Summary (breakdown of quadcopter drone etc)
+	Notes and any documentation for actual circuit building
+	Mechanical frame design (later)
+
+Cat
+	Pictures of my cat
+
+
+I think a lot of the Planning and Pseudocode will connect to Design Decision Summary as one is going to decide on options for the other on a regular basis.
+
+
+///// TODO /////
+PWM
+4 separate timer/pwm generators that can work in the frequency range Im using (10-30kHz) and each with multiple different usable GPIO pins or even pin ports from eachother. That would be using the same one to handle all the PWM signals for one motor controller (each high side mosfet) which I would be doing anyway I think
+
+Interrupts
+Depending on whether I use external or internal comparator/ADCs, but the 6 stages of the phase switching cycle mean 3 phases each with 2 interrupt triggers (one for rising above the Vref and one for falling below) which is 3 floating phase and Vref pairs (but only need 1 GPIO input pin to handle all comparisons). This might be able to be handled all with one interrupt per motor controller if I keep track of the switching stage to switch the trigger to the GPIO pin for the next stage as well as the output states of the high and low side mosfet gate driver pins for the next stage (including which one to use for the PWM signal output for the high side
