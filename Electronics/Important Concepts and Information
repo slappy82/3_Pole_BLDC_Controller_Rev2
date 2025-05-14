@@ -1,0 +1,12 @@
+TODO: 
+	* Intro, explain purpose of section
+	* BLDC motors, summary, why they are ideal for this, how motors work and main calculations, Li Ion batteries, lead into next section...
+	* How to power and work with the three phase brushless sensorless DC motor...
+		* Phase combinations in sequence leading to the H bridge
+		* Powering the MOSFETs with a MCU - using a gate driver and the bootstrap circuit
+		* Speed control of a sensorless motor - using 'zero crossing' (but really 1/2 DC voltage) comparison circuit to read the back-emf
+	* The motor controller in full
+	* Flight control: controlling the motor controllers
+		* MCU to MCU communication
+		* Remote to Flight MCU communication
+		* Looking at using phone app because android api has everything I need (probably)
